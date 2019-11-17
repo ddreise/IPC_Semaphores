@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		strcat(data, buffer);		// Print buffer to shared memory location
+		printf("printed..");
 
 	}
 

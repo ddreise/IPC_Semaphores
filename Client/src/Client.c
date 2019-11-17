@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 		// 	letter = data[i];
 		// 	letter++;
 
-			printf("%s", data[i]);
+			printf("%c", data[i]);
 
 		 }
 
