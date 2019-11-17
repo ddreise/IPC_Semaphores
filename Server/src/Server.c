@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 	key_t key;			// Key variable
 	int shmid;			// Shared memory ID
 	char* data;			// shared memory pointer
-	char buffer[32];		// Buffer to hold 32 characters temporarily
+	char buffer[32];	// Buffer to hold 32 characters temporarily
 
 	srand(time(NULL));	// For random letter generation
 	
