@@ -52,7 +52,8 @@ int main(int argc, char *argv[]) {
 	/*********** MAIN FUNCTION OF SERVER *************/
 
 	// Generate random letters and print to shared memory
-	
+	strncpy(data, "Hello world!!!\n", SHM_SIZE);
+
 
 
 	/*********** END OF SERVER FUNCTION **************/
@@ -61,6 +62,12 @@ int main(int argc, char *argv[]) {
 	if (shmdt(data) == -1){
 		perror("shmdt failed\n");
 		exit(4);
+	}
+
+	// Delete shared memory segment
+	if((shmctl(shmid, IPC_RMID, NULL)) == -1){
+		perror("shdctl Delete failed!\n");
+		exit(5);
 	}
 
 
