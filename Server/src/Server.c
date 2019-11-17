@@ -7,6 +7,8 @@
 //			The client retreives data from shared memory and creates a histogram that
 //			indicates the frequency of each letter.
 //
+//			Uses shared memory and semaphores for process synchronization
+//
 // 
 // Daniel Dreise - All Rights Reserved
 // November 16, 2019
@@ -23,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -31,21 +34,36 @@
 
 int main(int argc, char *argv[]) {
 
-	key_t key;			// Key variable
-	int shmid;			// Shared memory ID
+	key_t shmkey, semkey;			// Key variable
+	int shmid, semid;			// Shared memory ID, semaphore ID
 	char* data;			// shared memory pointer
 	char buffer[32];	// Buffer to hold 32 characters temporarily
+	unsigned short sem_value = 0;
+
+	// Operation for incrementing semaphore
+	struct sembuf seminc = {
+		.sem_num = 0,
+		.sem_op = 1,
+		.sem_flg = 0
+	};
+
+	// Operation for decrementing semaphore
+	struct sembuf semdec = {
+		.sem_num = 0,
+		.sem_op = -1,
+		.sem_flg = 0
+	};
 
 	srand(time(NULL));	// For random letter generation
 	
-	// Make the "key" identifier to give to each process so they can access shared memory
-	if ((key = ftok(".", 'A')) == -1) {
-		perror("ftok failed\n");
+	// Make the shared memory"key" identifier to give to each process so they can access shared memory
+	if ((shmkey = ftok(".", 'A')) == -1) {
+		perror("ftok for shared memory failed\n");
 		exit(1);
 	}
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget(key, SHM_SIZE, 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
+	if ((shmid = shmget(shmkey, SHM_SIZE, 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
 		perror("shmget failed\n");
 		exit(2);
 	}
@@ -57,6 +75,37 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
+
+	// Make the semaphore key identifier
+	if ((semkey = ftok(".", 'A')) == -1) {
+		perror("ftok for semaphore failed\n");
+		exit(4);
+	}
+
+	// Create a semaphore set
+    if (semid = semget( semkey, 1, 0640 | IPC_CREAT | IPC_EXCL ) == -1){
+        printf("semget failed\n");
+        exit(5);
+    }
+
+	// Initialize semaphore
+	if (semctl (semid, 1, SETALL, sem_value) == -1) {
+		printf ("semaphore init failed\n");
+		exit (6);
+	}
+
+	if (semop(semid, &seminc, 1) == -1){
+		printf("Semaphore increment failed\n");
+		exit(7);
+	}
+
+	if (semop(semid, &semdec, 1) == -1){
+		printf("Semaphore decrement failed\n");
+		exit(8);
+	}
+
+
+
 
 	/*********** MAIN FUNCTION OF SERVER *************/
 
@@ -75,17 +124,24 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*********** END OF SERVER FUNCTION **************/
+    
+	
+	// Cleanup shared memory and semaphore 
+    if (segctl(semid, 1, IPC_RMID) ==-1){
+        printf("semctl() remove id failed\n");
+        exit(7);
+      }
 
 	// Detach from segment if finished
 	if (shmdt(data) == -1){
 		perror("shmdt failed\n");
-		exit(4);
+		exit(8);
 	}
 
 	// Delete shared memory segment
 	if((shmctl(shmid, IPC_RMID, NULL)) == -1){
 		perror("shdctl Delete failed!\n");
-		exit(5);
+		exit(9);
 	}
 
 
