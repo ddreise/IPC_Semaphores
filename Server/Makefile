@@ -1,5 +1,5 @@
 CC		:= gcc
-CFLAGS	:= -Wall -Wextra -g
+CFLAGS	:= -g
 
 BIN		:= bin
 SRC		:= src
@@ -9,9 +9,9 @@ LIB		:= lib
 LIBRARIES	:=
 
 ifeq ($(OS),Windows_NT)
-EXECUTABLE	:= main.exe
+EXECUTABLE	:= Server.exe
 else
-EXECUTABLE	:= main
+EXECUTABLE	:= Server
 endif
 
 SOURCEDIRS	:= $(shell find $(SRC) -type d)
