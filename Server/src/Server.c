@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 	srand(time(NULL));	// For random letter generation
 	
 	// Make the shared memory"key" identifier to give to each process so they can access shared memory
-	if ((shmkey = ftok(".", 'A')) == -1) {
+	if ((shmkey = ftok(".", 'M')) == -1) {
 		perror("ftok for shared memory failed\n");
 		exit(1);
 	}
@@ -77,13 +77,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Make the semaphore key identifier
-	if ((semkey = ftok(".", 'A')) == -1) {
+	if ((semkey = ftok(".", 'S')) == -1) {
 		perror("ftok for semaphore failed\n");
 		exit(4);
 	}
 
 	// Create a semaphore set
-    if ((semid = semget( semkey, 1, 0640 | IPC_CREAT | IPC_EXCL )) == -1){
+    if ((semid = semget( semkey, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
         printf("semget failed\n");
         exit(5);
     }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		strcat(data, buffer);		// Print buffer to shared memory location
-		printf("printed..");
+		printf("printed to shared memory...\n");
 
 		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore decrement failed\n");
