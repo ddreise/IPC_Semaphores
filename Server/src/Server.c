@@ -44,14 +44,14 @@ int main(int argc, char *argv[]) {
 	struct sembuf seminc = {
 		.sem_num = 0,
 		.sem_op = 1,
-		.sem_flg = 0
+		.sem_flg = SEM_UNDO
 	};
 
 	// Operation for decrementing semaphore
 	struct sembuf semdec = {
 		.sem_num = 0,
 		.sem_op = -1,
-		.sem_flg = 0
+		.sem_flg = SEM_UNDO
 	};
 
 	srand(time(NULL));	// For random letter generation
@@ -83,27 +83,16 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Create a semaphore set
-    if (semid = semget( semkey, 1, 0640 | IPC_CREAT | IPC_EXCL ) == -1){
+    if ((semid = semget( semkey, 1, 0640 | IPC_CREAT | IPC_EXCL )) == -1){
         printf("semget failed\n");
         exit(5);
     }
 
-	// Initialize semaphore
-	if (semctl (semid, 1, SETALL, sem_value) == -1) {
-		printf ("semaphore init failed\n");
-		exit (6);
-	}
-
-	if (semop(semid, &seminc, 1) == -1){
-		printf("Semaphore increment failed\n");
-		exit(7);
-	}
-
-	if (semop(semid, &semdec, 1) == -1){
-		printf("Semaphore decrement failed\n");
-		exit(8);
-	}
-
+	// // Initialize semaphore
+	// if ((semctl (semid, 0, SETALL)) == -1) {
+	// 	printf ("semaphore init failed\n");
+	// 	exit (6);
+	// }
 
 
 
@@ -118,8 +107,20 @@ int main(int argc, char *argv[]) {
 			buffer[i] = (rand() % (84-65)) + 65; 	//65 is ASCII for capital A, 84 is ASCII for capital T
 		}
 
+		// BEGIN CRITICAL SECTION
+		if (semop(semid, &seminc, 1) == -1){
+			printf("Semaphore increment failed\n");
+			exit(7);
+		}
+
 		strcat(data, buffer);		// Print buffer to shared memory location
 		printf("printed..");
+
+		if (semop(semid, &semdec, 1) == -1){
+			printf("Semaphore decrement failed\n");
+			exit(8);
+		}
+		// END CRITICAL SECTION
 
 	}
 
@@ -127,23 +128,22 @@ int main(int argc, char *argv[]) {
     
 	
 	// Cleanup shared memory and semaphore 
-    if (segctl(semid, 1, IPC_RMID) ==-1){
+    if (semctl(semid, 1, IPC_RMID) ==-1){
         printf("semctl() remove id failed\n");
-        exit(7);
+        exit(9);
       }
 
 	// Detach from segment if finished
 	if (shmdt(data) == -1){
 		perror("shmdt failed\n");
-		exit(8);
+		exit(10);
 	}
 
 	// Delete shared memory segment
 	if((shmctl(shmid, IPC_RMID, NULL)) == -1){
 		perror("shdctl Delete failed!\n");
-		exit(9);
+		exit(11);
 	}
-
 
 
 	return(0);
