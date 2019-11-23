@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -31,30 +32,43 @@
 
 int main(int argc, char *argv[]) {
 
-	key_t key;			// Key variable
-	int shmid;			// Shared memory ID
+	key_t shmkey, semkey;			// Key variable
+	int shmid, semid;			// Shared memory ID
 	char* data;			// shared memory pointer
-	char buf[20];	// Buffer to hold frequency of letters
+	char buf[20];		// Buffer to hold frequency of letters
 	char temp;
 
 	enum letters {
 		A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, T
 	} letter;
 	
+	struct sembuf seminc = {
+		.sem_num = 0,
+		.sem_op = 1,
+		.sem_flg = SEM_UNDO
+	};
+
+	// Operation for decrementing semaphore
+	struct sembuf semdec = {
+		.sem_num = 0,
+		.sem_op = -1,
+		.sem_flg = SEM_UNDO
+	};
+
 	// Make the "key" identifier to give to each process so they can access shared memory
-	if ((key = ftok(".", 'A')) == -1) {
+	if ((shmkey = ftok(".", 'A')) == -1) {
 		perror("ftok failed\n");
 		exit(1);
 	}
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget(key, SHM_SIZE, 0640)) == -1){		// 0444 - client can only rad
+	if ((shmid = shmget(shmkey, SHM_SIZE, 0640)) == -1){		// 0444 - client can only rad
 		
 		// If no shared memory exists, relaunch server application
 		//system("cd ..");
 		//system("./Server/bin/Server &");
 		//sleep(1);
-		if ((shmid = shmget(key, SHM_SIZE, 0640)) == -1){
+		if ((shmid = shmget(shmkey, SHM_SIZE, 0640)) == -1){
 			perror("client/server failed\n");
 			exit(2);
 		}
@@ -68,10 +82,27 @@ int main(int argc, char *argv[]) {
 		exit (3);
 	}
 
+	// Make the semaphore key identifier
+	if ((semkey = ftok(".", 'S')) == -1) {
+		perror("ftok for semaphore failed\n");
+		exit(4);
+	}
+
+	// Create a semaphore set
+    if ((semid = semget( semkey, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
+        printf("semget failed\n");
+        exit(5);
+    }
+
 	/*********** MAIN FUNCTION OF CLIENT *************/
 
 	// Read from shared memory
 	while(1){
+
+		if (semop(semid, &semdec, 1) == -1){
+			printf("Semaphore decrement failed\n");
+			exit(7);
+		}
 
 		 for (int i = 0; i < SHM_SIZE; i++){
 
@@ -81,6 +112,11 @@ int main(int argc, char *argv[]) {
 			printf("%c", data[i]);
 
 		 }
+
+		if (semop(semid, &seminc, 1) == -1){
+			printf("Semaphore increment failed\n");
+			exit(8);
+		}
 
 	}
 

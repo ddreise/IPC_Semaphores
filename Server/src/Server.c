@@ -52,6 +52,10 @@ int main(int argc, char *argv[]) {
 		.sem_op = 1,
 		.sem_flg = SEM_UNDO
 	};
+	if (semop(semid, &seminc, 1) == -1) {
+		perror("semaphore_p failed\n");
+		exit(1);
+	}
 
 	// Operation for decrementing semaphore
 	struct sembuf semdec = {
@@ -59,6 +63,10 @@ int main(int argc, char *argv[]) {
 		.sem_op = -1,
 		.sem_flg = SEM_UNDO
 	};
+	if(semop(semid, &semdec, 1) == -1){
+		perror("semaphore_v failed\n");
+		exit(2);
+	}
 
 	srand(time(NULL));	// For random letter generation
 	
@@ -94,11 +102,11 @@ int main(int argc, char *argv[]) {
         exit(5);
     }
 
-	// // Initialize semaphore
-	// if ((semctl (semid, 0, SETALL)) == -1) {
-	// 	printf ("semaphore init failed\n");
-	// 	exit (6);
-	// }
+	// Initialize semaphore
+	if ((semctl (semid, 0, SETALL)) == -1) {
+		printf ("semaphore init failed\n");
+		exit (6);
+	}
 
 
 
@@ -114,7 +122,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// BEGIN CRITICAL SECTION
-		if (semop(semid, &seminc, 1) == -1){
+		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore increment failed\n");
 			exit(7);
 		}
@@ -123,7 +131,7 @@ int main(int argc, char *argv[]) {
 		printf("printed to shared memory...\n");
 
 
-		if (semop(semid, &semdec, 1) == -1){
+		if (semop(semid, &seminc, 1) == -1){
 			printf("Semaphore decrement failed\n");
 			exit(8);
 		}
