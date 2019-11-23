@@ -16,8 +16,9 @@ void histogram(char *data, int length){
         results[(data[i] - 65)]++;
     }
 
+    system("clear");
     for (i = 0; i < NUM_VALUES; i++){
-        printf("%d ", i);
+        printf("%c ", i + 65);
         for (j = 0; j < results[i]; j++){
             printf("*");
         }

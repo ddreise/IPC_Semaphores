@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Memory attached at %X\n", (int)shared_memory);
+	printf("Memory attached at %d\n", (int)shared_memory);
 	printf("Server shmid: %d\n", shmid);
 
 
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 
 		//strcat(data, buffer);		// Print buffer to shared memory location
 		for (int i = 0; i < 32; i++){
-			buffer[i] = (rand() % (84-65)) + 65; 	//65 is ASCII for capital A, 84 is ASCII for capital T
+			buffer[i] = (rand() % (85-65)) + 65; 	//65 is ASCII for capital A, 84 is ASCII for capital T
 			if (mem_index == SHM_SIZE) mem_index = 0;
 			shared_data->data[mem_index] = buffer[i];
 			mem_index++;
@@ -176,6 +176,8 @@ int main(int argc, char *argv[]) {
 		perror("shdctl Delete failed!\n");
 		exit(11);
 	}
+
+	printf("Done\n");
 
 
 	return(0);

@@ -14,5 +14,7 @@ void signalHandler(int signalnum){
 
     signalFlag = 1;
 
+    printf("\nQuitting program...\n");
+
 }
 

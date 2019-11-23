@@ -1,4 +1,4 @@
-// /usr/local/Cellar/bash/5.0.11/bin/bash
+
 // Client.c
 //
 // Operating Systems - Assignment 4
@@ -26,7 +26,6 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <unistd.h>
-#include <term.h>
 #include <time.h>
 #include <signal.h>
 #include "Signal.h"
@@ -59,6 +58,8 @@ int main(int argc, char *argv[]) {
 		.sem_flg = SEM_UNDO
 	};
 
+	signal (SIGINT, signalHandler);
+
 	// Make the "key" identifier to give to each process so they can access shared memory
 	// if ((shmkey = ftok(".", 'A')) == -1) {
 	// 	perror("ftok failed\n");
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Memory attached at %X\n", (int)shared_memory);
+	printf("Memory attached at %d\n", (int)shared_memory);
 	printf("Client shmid: %d\n", shmid);
 
 	// Make the semaphore key identifier
@@ -95,7 +96,7 @@ int main(int argc, char *argv[]) {
 	// }
 
 	// Create a semaphore set
-    if ((semid = semget( (key_t)1234, 1, 0666 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
+    if ((semid = semget( (key_t)1234, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
         printf("semget failed\n");
         exit(5);
     }
@@ -114,8 +115,10 @@ int main(int argc, char *argv[]) {
 	// Read from shared memory
 	while(!signalFlag){
 
-		sleep(2);
+		if(signalFlag) break;
 
+		sleep(2);
+		system("clear");
 		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore decrement failed\n");
 			exit(7);
@@ -129,7 +132,6 @@ int main(int argc, char *argv[]) {
 		// 	printf("%s", shared_data->data);
 
 		//  }
-		system("clear");
 		histogram(shared_data->data, SHM_SIZE);
 
 		if (semop(semid, &seminc, 1) == -1){
@@ -159,7 +161,7 @@ int main(int argc, char *argv[]) {
 		exit(5);
 	}
 
-
+	printf("Done\n");
 
 	return(0);
 }
