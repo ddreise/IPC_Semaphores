@@ -39,71 +39,83 @@ int main(int argc, char *argv[]) {
 
 	key_t shmkey, semkey;						// Key variable
 	int shmid, semid;							// Shared memory ID, semaphore ID
+	void *shared_memory = (void *) 0;
 	char *data;
 	char buffer[32];							// Buffer to hold 32 characters temporarily
 	unsigned short sem_value = 0;
+	unsigned short init_values[1] = { 1 };
 
-
-	signal (SIGINT, signalHandler);
-
-	// Operation for incrementing semaphore
 	struct sembuf seminc = {
 		.sem_num = 0,
 		.sem_op = 1,
 		.sem_flg = SEM_UNDO
 	};
-	if (semop(semid, &seminc, 1) == -1) {
-		perror("semaphore_p failed\n");
-		exit(1);
-	}
-
-	// Operation for decrementing semaphore
+	
 	struct sembuf semdec = {
 		.sem_num = 0,
 		.sem_op = -1,
 		.sem_flg = SEM_UNDO
 	};
-	if(semop(semid, &semdec, 1) == -1){
-		perror("semaphore_v failed\n");
-		exit(2);
-	}
+
+
+	signal (SIGINT, signalHandler);
+
+
 
 	srand(time(NULL));	// For random letter generation
 	
 	// Make the shared memory"key" identifier to give to each process so they can access shared memory
-	if ((shmkey = ftok(".", 'M')) == -1) {
-		perror("ftok for shared memory failed\n");
-		exit(1);
-	}
+	// if ((shmkey = ftok(".", 'M')) == -1) {
+	// 	perror("ftok for shared memory failed\n");
+	// 	exit(1);
+	// }
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget(shmkey, sizeof(struct circ_buff), 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
+	if ((shmid = shmget((key_t)1234, SHM_SIZE, 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
 		perror("shmget failed\n");
 		exit(2);
 	}
 
 	// Attach to the recently created segment
 	// shmat attaches to shared memory segment identified by shmid to the address space of the calling process
-	data = shmat(shmid, (void *)0, 0);			
-	if (data == (char *) (-1)){
+	shared_memory = shmat(shmid, (void *)0, 0);			
+	if (shared_memory == (void *) (-1)){
 		perror("shmat failed\n");
 		exit (3);
 	}
+	printf("Memory attached at %d\n", (int)shared_memory);
+
 
 	// Make the semaphore key identifier
-	if ((semkey = ftok(".", 'S')) == -1) {
-		perror("ftok for semaphore failed\n");
-		exit(4);
-	}
+	// if ((semkey = ftok(".", 'S')) == -1) {
+	// 	perror("ftok for semaphore failed\n");
+	// 	exit(4);
+	// }
 
 	// Create a semaphore set
-    if ((semid = semget( semkey, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
+    if ((semid = semget( (key_t)1234, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
         printf("semget failed\n");
         exit(5);
     }
 
+	// Operation for incrementing semaphore
+
+	if (semop(semid, &seminc, 1) == -1) {
+		perror("semaphore_p failed\n");
+		exit(1);
+	}
+
+	// Operation for decrementing semaphore
+
+	if(semop(semid, &semdec, 1) == -1){
+		perror("semaphore_v failed\n");
+		exit(2);
+	}
+
+	printf("Server semid: %d\n", semid);
+
 	// Initialize semaphore
-	if ((semctl (semid, 0, SETALL)) == -1) {
+	if ((semctl (semid, 0, SETALL, init_values)) == -1) {
 		printf ("semaphore init failed\n");
 		exit (6);
 	}
@@ -127,8 +139,8 @@ int main(int argc, char *argv[]) {
 			exit(7);
 		}
 
-		strcat(data, buffer);		// Print buffer to shared memory location
-		printf("printed to shared memory...\n");
+		//strcat(data, buffer);		// Print buffer to shared memory location
+		//printf("printed to shared memory...\n");
 
 
 		if (semop(semid, &seminc, 1) == -1){
