@@ -48,13 +48,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget(key, SHM_SIZE, 0444)) == -1){		// 0444 - client can only rad
+	if ((shmid = shmget(key, SHM_SIZE, 0640)) == -1){		// 0444 - client can only rad
 		
 		// If no shared memory exists, relaunch server application
-		system("cd ..");
-		system("./Server/bin/Server &");
-		sleep(1);
-		if ((shmid = shmget(key, SHM_SIZE, 0444)) == -1){
+		//system("cd ..");
+		//system("./Server/bin/Server &");
+		//sleep(1);
+		if ((shmid = shmget(key, SHM_SIZE, 0640)) == -1){
 			perror("client/server failed\n");
 			exit(2);
 		}
