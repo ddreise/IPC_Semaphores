@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Memory attached at %d\n", (int)shared_memory);
+	printf("Memory attached at %X\n", (int)shared_memory);
 
 	// Make the semaphore key identifier
 	// if ((semkey = ftok(".", 'S')) == -1) {
