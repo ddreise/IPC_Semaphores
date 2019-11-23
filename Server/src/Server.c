@@ -1,4 +1,4 @@
-// main.c
+// Server.c
 //
 // Operating Systems - Assignment 4
 //
@@ -28,17 +28,23 @@
 #include <sys/sem.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
+#include "Signal.h"
+#include "Useful_Functions.h"
 
 #define SHM_SIZE 1024			// Size of shared memory
 #define USLEEP_DELAY 250000		// sleep delay in microseconds
 
 int main(int argc, char *argv[]) {
 
-	key_t shmkey, semkey;			// Key variable
-	int shmid, semid;			// Shared memory ID, semaphore ID
-	char* data;			// shared memory pointer
-	char buffer[32];	// Buffer to hold 32 characters temporarily
+	key_t shmkey, semkey;						// Key variable
+	int shmid, semid;							// Shared memory ID, semaphore ID
+	char *data;
+	char buffer[32];							// Buffer to hold 32 characters temporarily
 	unsigned short sem_value = 0;
+
+
+	signal (SIGINT, signalHandler);
 
 	// Operation for incrementing semaphore
 	struct sembuf seminc = {
@@ -63,7 +69,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget(shmkey, SHM_SIZE, 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
+	if ((shmid = shmget(shmkey, sizeof(struct circ_buff), 0640 | IPC_CREAT)) == -1){		// 0640 - creator read/write
 		perror("shmget failed\n");
 		exit(2);
 	}
@@ -99,7 +105,7 @@ int main(int argc, char *argv[]) {
 	/*********** MAIN FUNCTION OF SERVER *************/
 
 	// Generate random letters and print to shared memory
-	while(1){
+	while(!signalFlag){
 		
 		usleep(USLEEP_DELAY);		// Sleep for USLEEP_DELAY microseconds
 
@@ -115,6 +121,7 @@ int main(int argc, char *argv[]) {
 
 		strcat(data, buffer);		// Print buffer to shared memory location
 		printf("printed to shared memory...\n");
+
 
 		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore decrement failed\n");
@@ -148,3 +155,4 @@ int main(int argc, char *argv[]) {
 
 	return(0);
 }
+
