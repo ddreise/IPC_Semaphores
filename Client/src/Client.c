@@ -1,3 +1,4 @@
+// /usr/local/Cellar/bash/5.0.11/bin/bash
 // Client.c
 //
 // Operating Systems - Assignment 4
@@ -25,9 +26,12 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <unistd.h>
+#include <term.h>
 #include <time.h>
 #include <signal.h>
 #include "Signal.h"
+#include "shm_com.h"
+#include "histogram.h"
 
 #define SHM_SIZE 1024			// Size of shared memory
 #define USLEEP_DELAY 250000		// sleep delay in microseconds
@@ -36,15 +40,11 @@ int main(int argc, char *argv[]) {
 
 	key_t shmkey, semkey;			// Key variable
 	int shmid, semid;			// Shared memory ID
-	void* shared_memory = (void *) 0;
-	char* data;			// shared memory pointer
+	void *shared_memory = (void *) 0;
+	struct shared_use_st *shared_data;
 	char buf[20];		// Buffer to hold frequency of letters
 	char temp;
 	unsigned short init_values[1] = { 1 };
-
-	enum letters {
-		A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, T
-	} letter;
 	
 	struct sembuf seminc = {
 		.sem_num = 0,
@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
 		exit (3);
 	}
 	printf("Memory attached at %X\n", (int)shared_memory);
+	printf("Client shmid: %d\n", shmid);
 
 	// Make the semaphore key identifier
 	// if ((semkey = ftok(".", 'S')) == -1) {
@@ -106,24 +107,30 @@ int main(int argc, char *argv[]) {
 	}
 
 
+	shared_data = (struct shared_use_st *) shared_memory;
+
 	/*********** MAIN FUNCTION OF CLIENT *************/
 
 	// Read from shared memory
 	while(!signalFlag){
+
+		sleep(2);
 
 		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore decrement failed\n");
 			exit(7);
 		}
 
-		 for (int i = 0; i < SHM_SIZE; i++){
+		//  for (int i = 0; i < SHM_SIZE; i++){
 
-		// 	letter = data[i];
-		// 	letter++;
+		// // 	letter = data[i];
+		// // 	letter++;
 
-			//printf("%c", data[i]);
+		// 	printf("%s", shared_data->data);
 
-		 }
+		//  }
+		system("clear");
+		histogram(shared_data->data, SHM_SIZE);
 
 		if (semop(semid, &seminc, 1) == -1){
 			printf("Semaphore increment failed\n");
@@ -141,7 +148,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Detach from segment if finished
-	if (shmdt(data) == -1){
+	if (shmdt(shared_memory) == -1){
 		perror("shmdt failed\n");
 		exit(4);
 	}

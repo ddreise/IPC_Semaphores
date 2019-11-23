@@ -30,7 +30,7 @@
 #include <time.h>
 #include <signal.h>
 #include "Signal.h"
-#include "Useful_Functions.h"
+#include "shm_com.h"
 
 #define SHM_SIZE 1024			// Size of shared memory
 #define USLEEP_DELAY 250000		// sleep delay in microseconds
@@ -40,10 +40,11 @@ int main(int argc, char *argv[]) {
 	key_t shmkey, semkey;						// Key variable
 	int shmid, semid;							// Shared memory ID, semaphore ID
 	void *shared_memory = (void *) 0;
-	char *data;
+	struct shared_use_st *shared_data;
 	char buffer[32];							// Buffer to hold 32 characters temporarily
 	unsigned short sem_value = 0;
 	unsigned short init_values[1] = { 1 };
+	int mem_index = 0;
 
 	struct sembuf seminc = {
 		.sem_num = 0,
@@ -84,6 +85,7 @@ int main(int argc, char *argv[]) {
 		exit (3);
 	}
 	printf("Memory attached at %X\n", (int)shared_memory);
+	printf("Server shmid: %d\n", shmid);
 
 
 	// Make the semaphore key identifier
@@ -121,6 +123,7 @@ int main(int argc, char *argv[]) {
 	}
 
 
+	shared_data = (struct shared_use_st *)shared_memory;
 
 	/*********** MAIN FUNCTION OF SERVER *************/
 
@@ -129,9 +132,6 @@ int main(int argc, char *argv[]) {
 		
 		usleep(USLEEP_DELAY);		// Sleep for USLEEP_DELAY microseconds
 
-		for (int i = 0; i < 32; i++){
-			buffer[i] = (rand() % (84-65)) + 65; 	//65 is ASCII for capital A, 84 is ASCII for capital T
-		}
 
 		// BEGIN CRITICAL SECTION
 		if (semop(semid, &semdec, 1) == -1){
@@ -140,7 +140,12 @@ int main(int argc, char *argv[]) {
 		}
 
 		//strcat(data, buffer);		// Print buffer to shared memory location
-		//printf("printed to shared memory...\n");
+		for (int i = 0; i < 32; i++){
+			buffer[i] = (rand() % (84-65)) + 65; 	//65 is ASCII for capital A, 84 is ASCII for capital T
+			if (mem_index == SHM_SIZE) mem_index = 0;
+			shared_data->data[mem_index] = buffer[i];
+			mem_index++;
+		}
 
 
 		if (semop(semid, &seminc, 1) == -1){
@@ -161,7 +166,7 @@ int main(int argc, char *argv[]) {
       }
 
 	// Detach from segment if finished
-	if (shmdt(data) == -1){
+	if (shmdt(shared_memory) == -1){
 		perror("shmdt failed\n");
 		exit(10);
 	}
