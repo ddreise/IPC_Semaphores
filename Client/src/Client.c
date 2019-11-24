@@ -60,25 +60,36 @@ int main(int argc, char *argv[]) {
 
 	signal (SIGINT, signalHandler);
 
-	// Make the "key" identifier to give to each process so they can access shared memory
-	// if ((shmkey = ftok(".", 'A')) == -1) {
-	// 	perror("ftok failed\n");
-	// 	exit(1);
-	// }
-
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
-	if ((shmid = shmget((key_t)1234, SHM_SIZE, 0640 | IPC_CREAT)) == -1){		// 0444 - client can only rad
-		
-		// If no shared memory exists, relaunch server application
-		//system("cd ..");
-		//system("./Server/bin/Server &");
-		//sleep(1);
-		//if ((shmid = shmget(shmkey, SHM_SIZE, 0640)) == -1){
-			perror("client/server failed\n");
-			exit(2);
-		//}
+	if ((shmid = shmget((key_t)1234, SHM_SIZE, 0640)) == -1){		// 0444 - client can only rad	
+
+		// If unable to connect to shared memory, fork a process that will launch server application
+		switch (fork()){
+			case 0:
+
+				execl("./Server", "Server", NULL);
+				printf("Return not expected, must be error with execl()\n");
+				exit(5);
+				break;
+
+			case -1:
+
+				printf("Couldn't fork\n");
+				exit(6);
+				break;
+
+		}
 	}
 
+	// Wait one second for server to launch
+	sleep(1);
+
+	// Try reconnecting. If failed again, exit program.
+	if ((shmid = shmget((key_t)1234, SHM_SIZE, 0640)) == -1){
+		perror("Client/Server non-functional\n");
+		exit(2);
+	}
+	
 	// Attach to the recently created segment
 	// shmat attaches to shared memory segment identified by shmid to the address space of the calling process
 	shared_memory = shmat(shmid, (void *)0, 0);			
@@ -86,14 +97,8 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Memory attached at %d\n", (int)shared_memory);
+	printf("Client attached at %X\n", (unsigned int)shared_memory);
 	printf("Client shmid: %d\n", shmid);
-
-	// Make the semaphore key identifier
-	// if ((semkey = ftok(".", 'S')) == -1) {
-	// 	perror("ftok for semaphore failed\n");
-	// 	exit(4);
-	// }
 
 	// Create a semaphore set
     if ((semid = semget( (key_t)1234, 1, 0640 | IPC_CREAT )) == -1){		// rmvd flag IPC_EXCL
@@ -124,14 +129,6 @@ int main(int argc, char *argv[]) {
 			exit(7);
 		}
 
-		//  for (int i = 0; i < SHM_SIZE; i++){
-
-		// // 	letter = data[i];
-		// // 	letter++;
-
-		// 	printf("%s", shared_data->data);
-
-		//  }
 		histogram(shared_data->data, SHM_SIZE);
 
 		if (semop(semid, &seminc, 1) == -1){

@@ -3,6 +3,8 @@
 // Daniel Dreise (c) November 23, 2019
 
 #include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #define NUM_VALUES 20
 
@@ -16,7 +18,9 @@ void histogram(char *data, int length){
         results[(data[i] - 65)]++;
     }
 
+
     system("clear");
+
     for (i = 0; i < NUM_VALUES; i++){
         printf("%c ", i + 65);
         for (j = 0; j < results[i]; j++){
