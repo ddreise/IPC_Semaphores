@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Server attached at %X\n", (unsigned int)shared_memory);
+	//printf("Server attached at %X\n", (unsigned int)shared_memory);
 	printf("Server shmid: %d\n", shmid);
 
 

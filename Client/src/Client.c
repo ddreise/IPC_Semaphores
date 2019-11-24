@@ -39,12 +39,13 @@ int main(int argc, char *argv[]) {
 
 	key_t shmkey, semkey;			// Key variable
 	int shmid, semid;			// Shared memory ID
-	void *shared_memory = (void *) 0;
-	struct shared_use_st *shared_data;
-	char buf[20];		// Buffer to hold frequency of letters
+	void *shared_memory = (void *) 0;	// Shared memory pointer
+	struct shared_use_st *shared_data;	// Shared memory data structure
+	char buf[20];				// Buffer to hold frequency of letters
 	char temp;
 	unsigned short init_values[1] = { 1 };
 	
+	// Structure for incrementing semaphore
 	struct sembuf seminc = {
 		.sem_num = 0,
 		.sem_op = 1,
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
 		.sem_flg = SEM_UNDO
 	};
 
+	// Initialize signals
 	signal (SIGINT, signalHandler);
 
 	// Connect to shared memory. If not created, create one (IPC_CREAT)
@@ -97,7 +99,7 @@ int main(int argc, char *argv[]) {
 		perror("shmat failed\n");
 		exit (3);
 	}
-	printf("Client attached at %X\n", (unsigned int)shared_memory);
+
 	printf("Client shmid: %d\n", shmid);
 
 	// Create a semaphore set
@@ -107,6 +109,7 @@ int main(int argc, char *argv[]) {
     }
 	printf("Client semid: %d\n", semid);
 
+	// Initialize semaphore
 	if ((semctl (semid, 0, SETALL, init_values)) == -1) {
 		printf ("semaphore init failed\n");
 		exit (6);
@@ -120,26 +123,35 @@ int main(int argc, char *argv[]) {
 	// Read from shared memory
 	while(!signalFlag){
 
-		if(signalFlag) break;
-
+		if(signalFlag) break;	// If somehow still makes it into loop with sigflag, break from it.
+		// Sleep for 2 seconds
 		sleep(2);
+
+		// Clear the terminal
 		system("clear");
+
+		/******* CRITICAL REGION ******/
+		// Decrement semaphore, restict others from accessing shared memory
 		if (semop(semid, &semdec, 1) == -1){
 			printf("Semaphore decrement failed\n");
 			exit(7);
 		}
 
+		// Print out histogram of data in shared memory
 		histogram(shared_data->data, SHM_SIZE);
 
+		// Increment semphore, allow others to access shared memory
 		if (semop(semid, &seminc, 1) == -1){
 			printf("Semaphore increment failed\n");
 			exit(8);
 		}
+		/****** END CRITICAL REGION ******/
 
 	}
 
 	/*********** END OF CLIENT FUNCTION **************/
 
+	// Remove semaphore id
 	if (semctl(semid, 1, IPC_RMID) == -1){
 		printf("semctl() remove id failed\n");
 		exit(9);
